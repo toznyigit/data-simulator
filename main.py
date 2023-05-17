@@ -7,7 +7,9 @@ from libs.utils.data_functions import *
 from libs.utils.adapter import BusAdapter
 from paho.mqtt import client as mqtt_client
 
-
+# MQTT broker information
+# Set the server IP from argument passed to the script
+MQTT_HOST = "mosquitto"
 MODE = [
     'static',
     'stream'
@@ -42,8 +44,8 @@ def stream(core, bus_name, interval):
 
         _json = dumps(_dict)
         # print(_json)
-        if mqtt_client.publish(f"/sensors/{bus_name}", _json).is_published():
-            print(f"Published to /sensors/{bus_namuue}")
+        if mqtt_client.publish(f"/grid/{bus_name}", _json).is_published():
+            print(f"Published to /sensors/{bus_name}")
         else:
             print(f"Failed to publish to /sensors/{bus_name}")
         sleep(interval)
