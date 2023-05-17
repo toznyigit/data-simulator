@@ -6,6 +6,8 @@ from json import dumps
 from libs.utils.data_functions import *
 from libs.utils.adapter import BusAdapter
 from paho.mqtt import client as mqtt_client
+
+
 MODE = [
     'static',
     'stream'
@@ -39,8 +41,11 @@ def stream(core, bus_name, interval):
         _dict['datetime'] = str(datetime)
 
         _json = dumps(_dict)
-        print(_json)
-
+        # print(_json)
+        if mqtt_client.publish(f"/sensors/{bus_name}", _json).is_published():
+            print(f"Published to /sensors/{bus_namuue}")
+        else:
+            print(f"Failed to publish to /sensors/{bus_name}")
         sleep(interval)
 
 def static(core):
@@ -82,12 +87,22 @@ if __name__ == '__main__':
         assert len(argv) == 5,\
         """
             Missing parameter.
-            Usage: python3 main.py stream random_seed interval bus
+            Usage: python3 main.py stream random_seed interval bus mqtt_host
         """
         assert argv[4] in core.bus_list.keys(),\
         """
             No such bus in network. Check core.py again.
         """
+        MQTT_HOST = argv[5]
+        # the bus name will be appended to the topic automatically
+        bus_name = "BUS "+argv[4]
+        MQTT_TOPIC = "/grid/{bus_name}"
+        print(f"MQTT_TOPIC: {MQTT_TOPIC}")
+        mqtt_client = mqtt_client.Client()
+        print(f"Connecting to {MQTT_HOST}")
+        mqtt_client.connect(MQTT_HOST, 1883, 60)
+        mqtt_client.loop_start()
+
         stream(core, argv[4], int(argv[3]))
     elif argv[1] == 'static':
         static(core)
