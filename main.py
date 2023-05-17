@@ -1,4 +1,5 @@
-from sys import argv
+from sys import argv 
+import socket
 from core import Core
 from datetime import timedelta, datetime as dt
 from time import sleep
@@ -7,15 +8,12 @@ from libs.utils.data_functions import *
 from libs.utils.adapter import BusAdapter
 from paho.mqtt import client as mqtt_client
 
-# MQTT broker information
-# Set the server IP from argument passed to the script
-MQTT_HOST = "mosquitto"
 MODE = [
     'static',
     'stream'
 ]
 
-def stream(core, bus_name, interval):
+def stream(core, bus_name, interval, mqtt_client, MQTT_TOPIC):
     while True:
         bus_object = core.bus_list[bus_name]
         _dict = {'bus': bus_name}
@@ -44,8 +42,8 @@ def stream(core, bus_name, interval):
 
         _json = dumps(_dict)
         # print(_json)
-        if mqtt_client.publish(f"/grid/{bus_name}", _json).is_published():
-            print(f"Published to /grid/{bus_name}")
+        if mqtt_client.publish(MQTT_TOPIC, _json).is_published():
+            print(f"Published to {MQTT_TOPIC}")
         else:
             print(f"Failed to publish to /grid/{bus_name}")
         sleep(interval)
@@ -74,7 +72,7 @@ def static(core):
     grouped_csv_converter(df_combine, df_combine.Bus, '../output')
 
 if __name__ == '__main__':
-    assert len(argv) in (4, 5),\
+    assert len(argv) in (4,6),\
     """
         Usage: python3 main.py static random_seed interval
 
@@ -86,7 +84,7 @@ if __name__ == '__main__':
     """
     core = Core(argv[2], MODE.index(argv[1]), dt.now().timestamp(), int(argv[3]))
     if argv[1] == 'stream':
-        assert len(argv) == 5,\
+        assert len(argv) == 6,\
         """
             Missing parameter.
             Usage: python3 main.py stream random_seed interval bus mqtt_host
@@ -96,15 +94,15 @@ if __name__ == '__main__':
             No such bus in network. Check core.py again.
         """
         MQTT_HOST = argv[5]
+        MQTT_TOPIC = f"/grid/{argv[4]}"
+        machine_name = socket.gethostname()
         # the bus name will be appended to the topic automatically
-        bus_name = "BUS "+argv[4]
-        MQTT_TOPIC = "/grid/{bus_name}"
         print(f"MQTT_TOPIC: {MQTT_TOPIC}")
-        mqtt_client = mqtt_client.Client()
+        mqtt_client = mqtt_client.Client(machine_name)
         print(f"Connecting to {MQTT_HOST}")
         mqtt_client.connect(MQTT_HOST, 1883, 60)
         mqtt_client.loop_start()
 
-        stream(core, argv[4], int(argv[3]))
+        stream(core, argv[4], int(argv[3]), mqtt_client, MQTT_TOPIC)
     elif argv[1] == 'static':
         static(core)
